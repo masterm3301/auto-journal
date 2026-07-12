@@ -1,0 +1,16 @@
+name: Ingest news
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call ingest endpoint
+        run: |
+          curl -fsS -X POST "${{ secrets.APP_URL }}/api/cron/ingest" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --max-time 290
