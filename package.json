@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "feeds:check": "tsx scripts/check-feeds.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

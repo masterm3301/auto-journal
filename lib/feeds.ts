@@ -3,7 +3,7 @@
 export const FEEDS: { name: string; url: string }[] = [
   { name: "هسبريس", url: "https://www.hespress.com/feed" },
   { name: "اليوم 24", url: "https://alyaoum24.com/feed" },
-  { name: "Le360 عربية", url: "https://ar.le360.ma/rss" },
+  { name: "Le360 عربية", url: "https://ar.le360.ma/arc/outboundfeeds/rss/?outputType=xml" },
   { name: "SNRT نيوز", url: "https://snrtnews.com/rss.xml" },
   { name: "هبة بريس", url: "https://ar.hibapress.com/feed" },
 ];
