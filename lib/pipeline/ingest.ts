@@ -8,6 +8,7 @@ import {
   type NormalizedItem,
   type RawFeedItem,
 } from "./normalize";
+import { fetchOgImage } from "./og-image";
 import { rewriteItem } from "./rewrite";
 import { selectCandidates } from "./select";
 import { fallbackSlug } from "./validate";
@@ -80,6 +81,7 @@ export async function runIngest(): Promise<RunSummary> {
   for (const item of picked) {
     try {
       const rewrite = await rewriteItem(item);
+      const imageUrl = item.imageUrl ?? (await fetchOgImage(item.link));
       await insertArticle({
         // A slug collision with an unrelated older article shouldn't kill the
         // insert — fall back to a unique generated slug.
@@ -88,7 +90,7 @@ export async function runIngest(): Promise<RunSummary> {
         dek: rewrite.dek,
         body: rewrite.body,
         category: rewrite.category,
-        imageUrl: item.imageUrl,
+        imageUrl,
         sourceName: item.sourceName,
         sourceUrl: item.link,
         isAi: true,
@@ -101,7 +103,7 @@ export async function runIngest(): Promise<RunSummary> {
             dek: rewrite.dek,
             body: rewrite.body,
             category: rewrite.category,
-            imageUrl: item.imageUrl,
+            imageUrl,
             sourceName: item.sourceName,
             sourceUrl: item.link,
             isAi: true,

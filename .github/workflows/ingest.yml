@@ -10,7 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call ingest endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS -X POST "${{ secrets.APP_URL }}/api/cron/ingest" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            --max-time 290
+          url="$(printf '%s' "$APP_URL" | tr -d '[:space:]')"
+          url="${url%/}"
+          secret="$(printf '%s' "$CRON_SECRET" | tr -d '[:space:]')"
+          if [ -z "$url" ]; then
+            echo "ERROR: APP_URL secret is empty or unset"
+            exit 1
+          fi
+          if [ -z "$secret" ]; then
+            echo "ERROR: CRON_SECRET secret is empty or unset"
+            exit 1
+          fi
+          code=$(curl -s -o /tmp/response.json -w "%{http_code}" -X POST \
+            "$url/api/cron/ingest" \
+            -H "Authorization: Bearer $secret" \
+            --max-time 290) || { echo "ERROR: curl could not reach $url"; exit 1; }
+          echo "HTTP $code"
+          cat /tmp/response.json
+          echo
+          [ "$code" = "200" ]

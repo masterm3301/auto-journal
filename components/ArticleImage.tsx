@@ -32,6 +32,7 @@ export default function ArticleImage({
       className={`object-cover ${className ?? ""}`}
       onError={() => setFailed(true)}
       loading="lazy"
+      referrerPolicy="no-referrer"
     />
   );
 }
