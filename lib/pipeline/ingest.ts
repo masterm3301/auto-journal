@@ -8,6 +8,7 @@ import {
   type NormalizedItem,
   type RawFeedItem,
 } from "./normalize";
+import { DAILY_QUOTA_ERROR } from "./groq";
 import { fetchOgImage } from "./og-image";
 import { rewriteItem } from "./rewrite";
 import { selectCandidates } from "./select";
@@ -128,6 +129,12 @@ export async function runIngest(): Promise<RunSummary> {
       });
       summary.published++;
     } catch (err) {
+      if (err instanceof Error && err.message === DAILY_QUOTA_ERROR) {
+        summary.errors.push(
+          "groq daily token quota exhausted — publishing resumes automatically when it resets",
+        );
+        break;
+      }
       summary.errors.push(`item ${item.link}: ${String(err).slice(0, 200)}`);
     }
   }

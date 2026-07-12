@@ -37,7 +37,9 @@ export async function selectCandidates(
     ].join("\n");
 
     const text = await groqJsonCompletion(
-      { system: SYSTEM_PROMPT, user, maxTokens: 300, temperature: 0 },
+      // A small model is plenty for pick-from-a-list, and Groq's daily token
+      // quotas are per-model — this keeps the 70B budget for article writing.
+      { system: SYSTEM_PROMPT, user, maxTokens: 300, temperature: 0, model: "llama-3.1-8b-instant" },
       deadlineAt,
     );
     const indices = validateSelection(JSON.parse(text), shown.length, max);

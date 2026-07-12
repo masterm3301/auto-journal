@@ -1,7 +1,9 @@
 // Shared Groq client (OpenAI-compatible API, free tier).
 // Get a key at https://console.groq.com
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+
+export const DAILY_QUOTA_ERROR = "groq daily token quota exhausted";
 
 export function hasApiKey(): boolean {
   return Boolean(process.env.GROQ_API_KEY);
@@ -23,6 +25,7 @@ interface CompletionOptions {
   user: string;
   maxTokens: number;
   temperature?: number;
+  model?: string;
 }
 
 export async function groqJsonCompletion(
@@ -48,7 +51,7 @@ async function request(
     },
     signal: AbortSignal.timeout(attemptMs),
     body: JSON.stringify({
-      model: MODEL,
+      model: options.model ?? DEFAULT_MODEL,
       max_tokens: options.maxTokens,
       temperature: options.temperature ?? 0.4,
       response_format: { type: "json_object" },
@@ -59,17 +62,24 @@ async function request(
     }),
   });
 
-  if (response.status === 429 && allowRetry) {
-    const retryAfterSeconds = Number.parseFloat(response.headers.get("retry-after") ?? "20");
-    const waitMs = Math.min(
-      (Number.isFinite(retryAfterSeconds) ? retryAfterSeconds + 1 : 20) * 1000,
-      MAX_RETRY_WAIT_MS,
-      deadlineAt - Date.now() - 10_000,
-    );
-    await response.body?.cancel();
-    if (waitMs <= 0) throw new Error("groq 429: rate limited, no budget left to retry");
-    await sleep(waitMs);
-    return request(options, false, deadlineAt);
+  if (response.status === 429) {
+    const detail = (await response.text()).slice(0, 300);
+    // A per-minute limit is worth waiting out; the per-day limit resets in
+    // hours — fail immediately so the run can wrap up cleanly.
+    if (/per day|TPD/i.test(detail)) throw new Error(DAILY_QUOTA_ERROR);
+    if (allowRetry) {
+      const retryAfterSeconds = Number.parseFloat(response.headers.get("retry-after") ?? "20");
+      const waitMs = Math.min(
+        (Number.isFinite(retryAfterSeconds) ? retryAfterSeconds + 1 : 20) * 1000,
+        MAX_RETRY_WAIT_MS,
+        deadlineAt - Date.now() - 10_000,
+      );
+      if (waitMs > 0) {
+        await sleep(waitMs);
+        return request(options, false, deadlineAt);
+      }
+    }
+    throw new Error(`groq 429: ${detail.slice(0, 150)}`);
   }
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 200);
