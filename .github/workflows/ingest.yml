@@ -28,7 +28,7 @@ jobs:
           code=$(curl -s -o /tmp/response.json -w "%{http_code}" -X POST \
             "$url/api/cron/ingest" \
             -H "Authorization: Bearer $secret" \
-            --max-time 290) || { echo "ERROR: curl could not reach $url"; exit 1; }
+            --max-time 290) || { echo "ERROR: curl failed (exit $? — 28 means the request exceeded 290s)"; exit 1; }
           echo "HTTP $code"
           cat /tmp/response.json
           echo

@@ -13,7 +13,7 @@ function sleep(ms: number): Promise<void> {
 
 // Groq's free tier caps tokens per minute; a burst of calls trips it. On a
 // 429 we wait out the server-provided retry-after (bounded) and retry once.
-const MAX_RETRY_WAIT_MS = 90_000;
+const MAX_RETRY_WAIT_MS = 60_000;
 
 export async function groqJsonCompletion(options: {
   system: string;

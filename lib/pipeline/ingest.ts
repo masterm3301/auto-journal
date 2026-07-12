@@ -21,7 +21,14 @@ export interface RunSummary {
   errors: string[];
 }
 
-const MAX_PER_RUN = 5;
+// 4 articles × ~2.5K tokens fits Groq's free-tier 12K tokens/minute budget;
+// 5 consistently trips it and stalls the run on retry waits.
+const MAX_PER_RUN = 4;
+
+// The GitHub Actions curl gives up at 290s and Vercel kills the function at
+// 300s — stop starting new rewrites well before that. Deferred items are
+// simply picked up by the next run.
+const RUN_DEADLINE_MS = 180_000;
 
 const parser = new Parser({
   timeout: 15000,
@@ -48,6 +55,7 @@ async function fetchFeed(name: string, url: string): Promise<NormalizedItem[]> {
 }
 
 export async function runIngest(): Promise<RunSummary> {
+  const startedAt = Date.now();
   const summary: RunSummary = {
     feedsOk: 0,
     feedsFailed: 0,
@@ -79,6 +87,10 @@ export async function runIngest(): Promise<RunSummary> {
   const picked = await selectCandidates(fresh, recentTitles, MAX_PER_RUN);
 
   for (const item of picked) {
+    if (Date.now() - startedAt > RUN_DEADLINE_MS) {
+      summary.errors.push("run deadline reached — remaining items deferred to the next run");
+      break;
+    }
     try {
       const rewrite = await rewriteItem(item);
       const imageUrl = item.imageUrl ?? (await fetchOgImage(item.link));
