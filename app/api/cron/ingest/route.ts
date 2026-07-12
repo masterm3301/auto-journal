@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
-import { runIngest } from "@/lib/pipeline/ingest";
+import { runIngest, type RunSummary } from "@/lib/pipeline/ingest";
 import { hasApiKey } from "@/lib/pipeline/rewrite";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,24 @@ async function handle(request: NextRequest) {
     );
   }
 
-  const summary = await runIngest();
+  // Last-resort guard: respond before the GitHub Actions curl (290s) and
+  // Vercel's function limit (300s) give up, even if a dependency hangs in a
+  // way the pipeline's own deadline can't see. Unfinished items are simply
+  // picked up by the next run.
+  const hardTimeout = new Promise<RunSummary>((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          feedsOk: 0,
+          feedsFailed: 0,
+          candidates: 0,
+          published: 0,
+          errors: ["hard timeout: run did not finish within 250s — items deferred to next run"],
+        }),
+      250_000,
+    ),
+  );
+  const summary = await Promise.race([runIngest(), hardTimeout]);
   if (summary.published > 0) {
     revalidatePath("/", "layout");
   }

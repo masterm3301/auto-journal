@@ -11,29 +11,42 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Groq's free tier caps tokens per minute; a burst of calls trips it. On a
-// 429 we wait out the server-provided retry-after (bounded) and retry once.
+// Under rate-limit pressure Groq has been observed holding connections open
+// rather than answering, so every attempt gets a hard abort timeout. Retries
+// after a 429 wait out the server's retry-after, but only within the caller's
+// remaining time budget — a call never outlives its deadline.
+const ATTEMPT_TIMEOUT_MS = 45_000;
 const MAX_RETRY_WAIT_MS = 60_000;
 
-export async function groqJsonCompletion(options: {
+interface CompletionOptions {
   system: string;
   user: string;
   maxTokens: number;
   temperature?: number;
-}): Promise<string> {
-  return request(options, true);
+}
+
+export async function groqJsonCompletion(
+  options: CompletionOptions,
+  deadlineAt: number = Date.now() + 120_000,
+): Promise<string> {
+  return request(options, true, deadlineAt);
 }
 
 async function request(
-  options: { system: string; user: string; maxTokens: number; temperature?: number },
+  options: CompletionOptions,
   allowRetry: boolean,
+  deadlineAt: number,
 ): Promise<string> {
+  const attemptMs = Math.min(ATTEMPT_TIMEOUT_MS, deadlineAt - Date.now());
+  if (attemptMs < 3_000) throw new Error("groq: run time budget exhausted");
+
   const response = await fetch(GROQ_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
     },
+    signal: AbortSignal.timeout(attemptMs),
     body: JSON.stringify({
       model: MODEL,
       max_tokens: options.maxTokens,
@@ -51,10 +64,12 @@ async function request(
     const waitMs = Math.min(
       (Number.isFinite(retryAfterSeconds) ? retryAfterSeconds + 1 : 20) * 1000,
       MAX_RETRY_WAIT_MS,
+      deadlineAt - Date.now() - 10_000,
     );
     await response.body?.cancel();
+    if (waitMs <= 0) throw new Error("groq 429: rate limited, no budget left to retry");
     await sleep(waitMs);
-    return request(options, false);
+    return request(options, false, deadlineAt);
   }
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 200);

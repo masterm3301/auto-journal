@@ -56,6 +56,7 @@ async function fetchFeed(name: string, url: string): Promise<NormalizedItem[]> {
 
 export async function runIngest(): Promise<RunSummary> {
   const startedAt = Date.now();
+  const deadlineAt = startedAt + RUN_DEADLINE_MS;
   const summary: RunSummary = {
     feedsOk: 0,
     feedsFailed: 0,
@@ -84,15 +85,15 @@ export async function runIngest(): Promise<RunSummary> {
   summary.candidates = fresh.length;
 
   const recentTitles = (await latestArticles(30)).map((article) => article.title);
-  const picked = await selectCandidates(fresh, recentTitles, MAX_PER_RUN);
+  const picked = await selectCandidates(fresh, recentTitles, MAX_PER_RUN, deadlineAt);
 
   for (const item of picked) {
-    if (Date.now() - startedAt > RUN_DEADLINE_MS) {
+    if (Date.now() > deadlineAt) {
       summary.errors.push("run deadline reached — remaining items deferred to the next run");
       break;
     }
     try {
-      const rewrite = await rewriteItem(item);
+      const rewrite = await rewriteItem(item, deadlineAt);
       const imageUrl = item.imageUrl ?? (await fetchOgImage(item.link));
       await insertArticle({
         // A slug collision with an unrelated older article shouldn't kill the

@@ -20,6 +20,7 @@ export async function selectCandidates(
   candidates: NormalizedItem[],
   recentTitles: string[],
   max: number,
+  deadlineAt?: number,
 ): Promise<NormalizedItem[]> {
   const shown = candidates.slice(0, MAX_CANDIDATES_SHOWN);
   if (shown.length <= 1) return shown;
@@ -35,12 +36,10 @@ export async function selectCandidates(
       `Pick up to ${max}. Reply with JSON only.`,
     ].join("\n");
 
-    const text = await groqJsonCompletion({
-      system: SYSTEM_PROMPT,
-      user,
-      maxTokens: 300,
-      temperature: 0,
-    });
+    const text = await groqJsonCompletion(
+      { system: SYSTEM_PROMPT, user, maxTokens: 300, temperature: 0 },
+      deadlineAt,
+    );
     const indices = validateSelection(JSON.parse(text), shown.length, max);
     if (indices === null) throw new Error("selection response failed validation");
     return indices.map((i) => shown[i]);
