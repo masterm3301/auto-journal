@@ -24,6 +24,13 @@ const MAX_PER_RUN = 5;
 
 const parser = new Parser({
   timeout: 15000,
+  headers: {
+    // Some Moroccan outlets 403 datacenter traffic with a bot-ish UA;
+    // a browser-like one passes.
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+  },
   customFields: {
     item: [
       ["media:content", "mediaContent"],
