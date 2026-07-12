@@ -41,9 +41,10 @@ The response is a run summary: `{feedsOk, feedsFailed, candidates, published, er
 ## How the pipeline works
 
 1. Every 30 minutes the GitHub Actions workflow (`.github/workflows/ingest.yml`) calls `POST /api/cron/ingest` with the `CRON_SECRET` bearer token.
-2. The route fetches all feeds in `lib/feeds.ts` (a dead feed never blocks the run), normalizes items, and drops anything whose source URL is already in the database — re-running is always safe.
-3. Up to **5** new items per run are rewritten by Groq's `llama-3.3-70b-versatile` into original Arabic articles (title, dek, body, category, slug) and published immediately with `is_ai = true` and a link to the original source.
-4. A failed item (including a Groq rate-limit hit) is simply retried on a later run, because it never entered the database.
+2. The route fetches all feeds in `lib/feeds.ts` (a dead feed never blocks the run), normalizes items, drops anything whose source URL is already in the database, and drops near-identical titles within the batch — re-running is always safe.
+3. A cheap curation call (`lib/pipeline/select.ts`) shows the model the recently published headlines plus the candidates and asks which are genuinely **new, distinct events** — this is what stops the same story arriving from three outlets under different headlines. If the call fails, the pipeline falls back to "take the newest 5".
+4. Up to **5** picked items per run are rewritten by Groq's `llama-3.3-70b-versatile` into original Arabic articles (title, dek, body, category, slug) and published immediately with `is_ai = true` and a link to the original source.
+5. A failed item (including a Groq rate-limit hit) is simply retried on a later run, because it never entered the database.
 
 Cost: **$0**. At 48 runs/day × 5 articles the pipeline makes at most 240 Groq requests/day, well inside the free tier; Vercel, Neon, and GitHub Actions also fit free tiers.
 

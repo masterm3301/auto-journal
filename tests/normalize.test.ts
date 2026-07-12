@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { filterNew, normalizeItem, type RawFeedItem } from "../lib/pipeline/normalize";
+import {
+  dedupeSimilar,
+  filterNew,
+  normalizeItem,
+  type RawFeedItem,
+} from "../lib/pipeline/normalize";
 
 const base: RawFeedItem = {
   title: "  خبر مهم اليوم  ",
@@ -64,5 +69,29 @@ describe("filterNew", () => {
   it("keeps everything when nothing exists", () => {
     const fresh = filterNew(items, new Set());
     expect(fresh.map((i) => i.link)).toEqual(["https://a.ma/1", "https://a.ma/2"]);
+  });
+});
+
+describe("dedupeSimilar", () => {
+  function item(title: string, link: string) {
+    return normalizeItem({ ...base, title, link }, "س")!;
+  }
+
+  it("keeps only the first of near-identical stories from different sources", () => {
+    const batch = [
+      item("الملك محمد السادس يبعث برقية تعزية إلى أمير دولة قطر", "https://a.ma/1"),
+      item("جلالة الملك يبعث برقية تعزية ومواساة إلى أمير قطر", "https://b.ma/1"),
+      item("الحكومة تعلن عن برنامج جديد لدعم المقاولات الصغرى", "https://c.ma/1"),
+    ];
+    const unique = dedupeSimilar(batch);
+    expect(unique.map((i) => i.link)).toEqual(["https://a.ma/1", "https://c.ma/1"]);
+  });
+
+  it("keeps genuinely different stories that share a few common words", () => {
+    const batch = [
+      item("أسعار المحروقات ترتفع في محطات الوقود بالمغرب", "https://a.ma/1"),
+      item("أسعار الخضر والفواكه تنخفض في الأسواق المغربية", "https://b.ma/1"),
+    ];
+    expect(dedupeSimilar(batch)).toHaveLength(2);
   });
 });

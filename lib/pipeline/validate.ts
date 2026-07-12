@@ -22,6 +22,28 @@ export function normalizeSlug(slug: string): string {
     .slice(0, 80);
 }
 
+// Response shape for the curation step: {"keep": [indices]}. Returns the
+// valid, deduplicated indices (capped at `max`), or null when the shape is
+// wrong entirely.
+export function validateSelection(
+  json: unknown,
+  candidateCount: number,
+  max: number,
+): number[] | null {
+  if (typeof json !== "object" || json === null) return null;
+  const keep = (json as Record<string, unknown>).keep;
+  if (!Array.isArray(keep)) return null;
+  const indices: number[] = [];
+  for (const value of keep) {
+    if (!Number.isInteger(value)) continue;
+    const index = value as number;
+    if (index < 0 || index >= candidateCount || indices.includes(index)) continue;
+    indices.push(index);
+    if (indices.length >= max) break;
+  }
+  return indices;
+}
+
 export function validateRewrite(json: unknown): Rewrite | null {
   if (typeof json !== "object" || json === null) return null;
   const obj = json as Record<string, unknown>;

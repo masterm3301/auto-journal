@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateRewrite } from "../lib/pipeline/validate";
+import { validateRewrite, validateSelection } from "../lib/pipeline/validate";
 
 const valid = {
   title: "عنوان المقال",
@@ -34,5 +34,25 @@ describe("validateRewrite", () => {
   it("falls back to a generated slug when the slug is empty or unusable", () => {
     const result = validateRewrite({ ...valid, slug: "عنوان-عربي" });
     expect(result!.slug).toMatch(/^khabar-[a-z0-9]+$/);
+  });
+});
+
+describe("validateSelection", () => {
+  it("accepts valid indices and caps at max", () => {
+    expect(validateSelection({ keep: [2, 0, 4, 1] }, 5, 3)).toEqual([2, 0, 4]);
+  });
+
+  it("drops out-of-range, duplicate, and non-integer entries", () => {
+    expect(validateSelection({ keep: [0, 0, 9, -1, 1.5, "2", 3] }, 5, 5)).toEqual([0, 3]);
+  });
+
+  it("accepts an empty keep list (nothing new to publish)", () => {
+    expect(validateSelection({ keep: [] }, 5, 5)).toEqual([]);
+  });
+
+  it("returns null when the shape is wrong", () => {
+    expect(validateSelection(null, 5, 5)).toBeNull();
+    expect(validateSelection({ keep: "all" }, 5, 5)).toBeNull();
+    expect(validateSelection([1, 2], 5, 5)).toBeNull();
   });
 });

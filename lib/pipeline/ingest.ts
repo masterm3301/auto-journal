@@ -1,8 +1,15 @@
 import Parser from "rss-parser";
-import { existingSourceUrls, insertArticle } from "../articles";
+import { existingSourceUrls, insertArticle, latestArticles } from "../articles";
 import { FEEDS } from "../feeds";
-import { filterNew, normalizeItem, type NormalizedItem, type RawFeedItem } from "./normalize";
+import {
+  dedupeSimilar,
+  filterNew,
+  normalizeItem,
+  type NormalizedItem,
+  type RawFeedItem,
+} from "./normalize";
 import { rewriteItem } from "./rewrite";
+import { selectCandidates } from "./select";
 import { fallbackSlug } from "./validate";
 
 export interface RunSummary {
@@ -57,10 +64,13 @@ export async function runIngest(): Promise<RunSummary> {
   items.sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0));
 
   const existing = await existingSourceUrls(items.map((i) => i.link));
-  const fresh = filterNew(items, existing);
+  const fresh = dedupeSimilar(filterNew(items, existing));
   summary.candidates = fresh.length;
 
-  for (const item of fresh.slice(0, MAX_PER_RUN)) {
+  const recentTitles = (await latestArticles(30)).map((article) => article.title);
+  const picked = await selectCandidates(fresh, recentTitles, MAX_PER_RUN);
+
+  for (const item of picked) {
     try {
       const rewrite = await rewriteItem(item);
       await insertArticle({

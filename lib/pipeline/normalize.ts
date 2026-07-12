@@ -66,6 +66,42 @@ export function normalizeItem(raw: RawFeedItem, sourceName: string): NormalizedI
   return { title, snippet, link, imageUrl: pickImage(raw), publishedAt, sourceName };
 }
 
+function titleWords(title: string): Set<string> {
+  return new Set(
+    title
+      // Normalize common Arabic letter variants so alef/hamza spelling
+      // differences between outlets don't hide a match.
+      .replace(/[أإآ]/g, "ا")
+      .replace(/ة/g, "ه")
+      .replace(/ى/g, "ي")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 1),
+  );
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let shared = 0;
+  for (const word of a) if (b.has(word)) shared++;
+  return shared / (a.size + b.size - shared);
+}
+
+const SIMILARITY_THRESHOLD = 0.5;
+
+// Different outlets often carry the same event in the same run. Source-URL
+// dedupe can't catch that, so drop items whose title heavily overlaps an
+// earlier item in the batch (order is newest-first, so the newest wins).
+export function dedupeSimilar(items: NormalizedItem[]): NormalizedItem[] {
+  const kept: { item: NormalizedItem; words: Set<string> }[] = [];
+  for (const item of items) {
+    const words = titleWords(item.title);
+    if (kept.some((k) => jaccard(k.words, words) >= SIMILARITY_THRESHOLD)) continue;
+    kept.push({ item, words });
+  }
+  return kept.map((k) => k.item);
+}
+
 export function filterNew(
   items: NormalizedItem[],
   existing: Set<string>,
