@@ -13,7 +13,7 @@ async function handle(request: NextRequest) {
   }
   if (!hasApiKey()) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured" },
+      { error: "GROQ_API_KEY is not configured" },
       { status: 503 },
     );
   }

@@ -1,6 +1,6 @@
 # مجيد (Majid)
 
-An Arabic-language (RTL) Moroccan news site that runs itself: a scheduled pipeline pulls headlines from Moroccan RSS feeds, rewrites each story into an original Arabic article with the Claude API, and publishes it automatically — with source attribution on every article. A minimal password-protected admin lets a human write, edit, or delete articles.
+An Arabic-language (RTL) Moroccan news site that runs itself: a scheduled pipeline pulls headlines from Moroccan RSS feeds, rewrites each story into an original Arabic article with an LLM (Groq free tier), and publishes it automatically — with source attribution on every article. A minimal password-protected admin lets a human write, edit, or delete articles.
 
 Design spec: `docs/superpowers/specs/2026-07-12-majid-news-site-design.md`
 
@@ -8,7 +8,7 @@ Design spec: `docs/superpowers/specs/2026-07-12-majid-news-site-design.md`
 
 - **Next.js 15** (App Router, TypeScript) + Tailwind v4, fully RTL
 - **Postgres** via Drizzle ORM — Neon in production (`DATABASE_URL`), embedded [PGlite](https://pglite.dev) locally (zero setup, data in `.pglite/`)
-- **Claude Haiku 4.5** (`@anthropic-ai/sdk`, structured outputs) for article rewriting
+- **Groq** (`llama-3.3-70b-versatile`, OpenAI-compatible API called via plain `fetch`, JSON mode) for article rewriting — free tier
 - **GitHub Actions** cron (every 30 min) triggering `/api/cron/ingest`
 
 ## Local development
@@ -29,7 +29,7 @@ Useful commands:
 | `npm test` | Unit tests for the pipeline's pure logic |
 | `npm run build` | Production build |
 
-To run the full pipeline locally, set `ANTHROPIC_API_KEY` in `.env`, then:
+To run the full pipeline locally, set `GROQ_API_KEY` in `.env` (free key at [console.groq.com](https://console.groq.com)), then:
 
 ```bash
 curl -X POST http://localhost:3000/api/cron/ingest \
@@ -42,17 +42,17 @@ The response is a run summary: `{feedsOk, feedsFailed, candidates, published, er
 
 1. Every 30 minutes the GitHub Actions workflow (`.github/workflows/ingest.yml`) calls `POST /api/cron/ingest` with the `CRON_SECRET` bearer token.
 2. The route fetches all feeds in `lib/feeds.ts` (a dead feed never blocks the run), normalizes items, and drops anything whose source URL is already in the database — re-running is always safe.
-3. Up to **5** new items per run are rewritten by Claude Haiku 4.5 into original Arabic articles (title, dek, body, category, slug) and published immediately with `is_ai = true` and a link to the original source.
-4. A failed item is simply retried on a later run, because it never entered the database.
+3. Up to **5** new items per run are rewritten by Groq's `llama-3.3-70b-versatile` into original Arabic articles (title, dek, body, category, slug) and published immediately with `is_ai = true` and a link to the original source.
+4. A failed item (including a Groq rate-limit hit) is simply retried on a later run, because it never entered the database.
 
-Cost: at ~50–80 articles/day, roughly **$0.30–0.60/day** in Claude API usage. Everything else fits free tiers.
+Cost: **$0**. At 48 runs/day × 5 articles the pipeline makes at most 240 Groq requests/day, well inside the free tier; Vercel, Neon, and GitHub Actions also fit free tiers.
 
 ## Production setup (Vercel + Neon + GitHub Actions)
 
 1. **Neon**: create a free Postgres database, copy the connection string.
 2. **Vercel**: import this repo; set environment variables:
    - `DATABASE_URL` — the Neon connection string
-   - `ANTHROPIC_API_KEY` — from console.anthropic.com
+   - `GROQ_API_KEY` — free from console.groq.com
    - `ADMIN_PASSWORD` — for `/admin`
    - `CRON_SECRET` — any long random string
    The `articles` table is created automatically on first use.
@@ -72,5 +72,5 @@ Cost: at ~50–80 articles/day, roughly **$0.30–0.60/day** in Claude API usage
 
 - `lib/feeds.ts` — RSS sources
 - `lib/categories.ts` — the 7 sections (سياسة، اقتصاد، رياضة، مجتمع، ثقافة، دولي، تكنولوجيا)
-- `lib/pipeline/rewrite.ts` — model, prompt, and output schema
+- `lib/pipeline/rewrite.ts` — provider, model, and prompt (this one file is all that changes to swap LLM providers later)
 - `lib/pipeline/ingest.ts` — per-run article cap (`MAX_PER_RUN`)
