@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --font-masthead: var(--font-aref-ruqaa), serif;
+  --font-serif-ar: var(--font-noto-naskh), "Noto Naskh Arabic", serif;
+  --font-sans-ar: var(--font-plex-arabic), "IBM Plex Sans Arabic", sans-serif;
+  --color-ink: #111111;
+  --color-rule: #d5d5d5;
+}
+
+body {
+  font-family: var(--font-serif-ar);
+  color: var(--color-ink);
+  background: #ffffff;
+}
