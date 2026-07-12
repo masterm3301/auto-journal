@@ -28,7 +28,19 @@ export function hasApiKey(): boolean {
   return Boolean(process.env.GROQ_API_KEY);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Groq's free tier caps tokens per minute; a burst of rewrites trips it. On a
+// 429 we wait out the server-provided retry-after (bounded) and retry once.
+const MAX_RETRY_WAIT_MS = 90_000;
+
 export async function rewriteItem(item: NormalizedItem): Promise<Rewrite> {
+  return rewriteWithRetry(item, true);
+}
+
+async function rewriteWithRetry(item: NormalizedItem, allowRetry: boolean): Promise<Rewrite> {
   const response = await fetch(GROQ_URL, {
     method: "POST",
     headers: {
@@ -50,6 +62,16 @@ export async function rewriteItem(item: NormalizedItem): Promise<Rewrite> {
     }),
   });
 
+  if (response.status === 429 && allowRetry) {
+    const retryAfterSeconds = Number.parseFloat(response.headers.get("retry-after") ?? "20");
+    const waitMs = Math.min(
+      (Number.isFinite(retryAfterSeconds) ? retryAfterSeconds + 1 : 20) * 1000,
+      MAX_RETRY_WAIT_MS,
+    );
+    await response.body?.cancel();
+    await sleep(waitMs);
+    return rewriteWithRetry(item, false);
+  }
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 200);
     throw new Error(`groq ${response.status}: ${detail}`);
