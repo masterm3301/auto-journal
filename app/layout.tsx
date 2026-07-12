@@ -22,12 +22,23 @@ const plexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-plex-arabic",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://majid-silk.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "مجيد | أخبار المغرب",
-    template: "%s | مجيد",
+    default: "ماجد | أخبار المغرب",
+    template: "%s | ماجد",
   },
-  description: "مجيد — صحيفة إلكترونية مغربية تنشر آخر الأخبار على مدار الساعة",
+  description: "ماجد — صحيفة إلكترونية مغربية تنشر آخر الأخبار على مدار الساعة",
+  openGraph: {
+    siteName: "ماجد",
+    type: "website",
+    locale: "ar_MA",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

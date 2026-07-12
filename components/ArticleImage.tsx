@@ -19,7 +19,7 @@ export default function ArticleImage({
         className={`flex items-center justify-center bg-neutral-100 text-neutral-400 ${className ?? ""}`}
         aria-hidden
       >
-        <span className="font-masthead text-3xl select-none">مجيد</span>
+        <span className="font-masthead text-3xl select-none">ماجد</span>
       </div>
     );
   }

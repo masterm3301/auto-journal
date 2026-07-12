@@ -5,7 +5,7 @@ import { validateRewrite, type Rewrite } from "./validate";
 
 export { hasApiKey } from "./groq";
 
-const SYSTEM_PROMPT = `أنت صحفي مغربي محترف يعمل في صحيفة "مجيد" الإلكترونية.
+const SYSTEM_PROMPT = `أنت صحفي مغربي محترف يعمل في صحيفة "ماجد" الإلكترونية.
 مهمتك: كتابة مقال إخباري عربي أصلي انطلاقا من عنوان ومقتطف خبر منشور في مصدر آخر.
 
 قواعد صارمة:

@@ -1,4 +1,4 @@
-# مجيد (Majid)
+# ماجد (Majid)
 
 An Arabic-language (RTL) Moroccan news site that runs itself: a scheduled pipeline pulls headlines from Moroccan RSS feeds, rewrites each story into an original Arabic article with an LLM (Groq free tier), and publishes it automatically — with source attribution on every article. A minimal password-protected admin lets a human write, edit, or delete articles.
 
