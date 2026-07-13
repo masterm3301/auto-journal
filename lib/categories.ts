@@ -5,7 +5,9 @@ export const CATEGORIES = [
   { slug: "society", name: "مجتمع" },
   { slug: "culture", name: "ثقافة" },
   { slug: "world", name: "حروب", focus: "أخبار الحروب والنزاعات المسلحة وتطوراتها فقط" },
+  { slug: "gaza", name: "حرب الطوفان", manual: true },
   { slug: "tech", name: "ستارتب", focus: "أخبار التمويل والاستثمار في الشركات الناشئة وريادة الأعمال" },
+  { slug: "trending", name: "ترند", focus: "الفيديوهات والأخبار الرائجة والمتداولة في المغرب" },
 ] as const;
 
 export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
