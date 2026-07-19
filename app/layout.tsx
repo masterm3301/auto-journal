@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Aref_Ruqaa, IBM_Plex_Sans_Arabic, Noto_Naskh_Arabic } from "next/font/google";
+import Script from "next/script";
 import Footer from "@/components/Footer";
 import Masthead from "@/components/Masthead";
 import NavBar from "@/components/NavBar";
@@ -49,6 +50,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${arefRuqaa.variable} ${notoNaskh.variable} ${plexArabic.variable}`}
     >
       <body>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-ZQWJE6C4DZ"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-ZQWJE6C4DZ');
+          `}
+        </Script>
         <Masthead />
         <NavBar />
         <main className="mx-auto min-h-[60vh] max-w-6xl px-4">{children}</main>

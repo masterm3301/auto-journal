@@ -75,3 +75,15 @@ Cost: **$0**. At 48 runs/day × 5 articles the pipeline makes at most 240 Groq r
 - `lib/categories.ts` — the 7 sections (سياسة، اقتصاد، رياضة، مجتمع، ثقافة، دولي، تكنولوجيا)
 - `lib/pipeline/rewrite.ts` — provider, model, and prompt (this one file is all that changes to swap LLM providers later)
 - `lib/pipeline/ingest.ts` — per-run article cap (`MAX_PER_RUN`)
+
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZQWJE6C4DZ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZQWJE6C4DZ');
+</script>
